@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.txy.mapper.AdminAccountMapper">
+
+    <sql id="Base_Column_List">
+        `user`, pass, role, name, deleted, last_login, created_at
+    </sql>
+
+    <sql id="NotDeleted">deleted = 0</sql>
+
+    <select id="selectAll" resultType="com.txy.entity.AdminAccount">
+        SELECT <include refid="Base_Column_List"/>
+        FROM admin_account
+        WHERE <include refid="NotDeleted"/>
+    </select>
+
+    <select id="selectByUser" resultType="com.txy.entity.AdminAccount">
+        SELECT <include refid="Base_Column_List"/>
+        FROM admin_account
+        WHERE `user` = #{user} AND <include refid="NotDeleted"/>
+        LIMIT 1
+    </select>
+
+    <!-- 登录：已删除账号不能登录 -->
+    <select id="selectByUserAndPass" resultType="com.txy.entity.AdminAccount">
+        SELECT <include refid="Base_Column_List"/>
+        FROM admin_account
+        WHERE `user` = #{user} AND pass = #{pass} AND <include refid="NotDeleted"/>
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.txy.entity.AdminAccount">
+        INSERT INTO admin_account (`user`, pass, role, name, deleted)
+        VALUES (#{user}, #{pass}, #{role}, #{name}, 0)
+    </insert>
+
+    <update id="update" parameterType="com.txy.entity.AdminAccount">
+        UPDATE admin_account
+        <set>
+            <if test="pass != null">pass = #{pass},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="lastLogin != null">last_login = #{lastLogin},</if>
+        </set>
+        WHERE `user` = #{user} AND deleted = 0
+    </update>
+
+    <update id="logicDelete">
+        UPDATE admin_account SET deleted = 1 WHERE `user` = #{user} AND deleted = 0
+    </update>
+
+</mapper>

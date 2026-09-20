@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.txy.mapper.NpcMapper">
+
+    <!-- 保留字 desc 必须反引号 -->
+    <sql id="Base_Column_List">
+        id, name, icon, cover, role, faction, camp_label, power, ability, cost,
+        tags, `desc`, quotes, hook_action, hook_contrast, hook_fragile, hook_speech,
+        sort, status, deleted, created_at, updated_at
+    </sql>
+
+    <!-- 逻辑删除条件：所有查询统一带上 -->
+    <sql id="NotDeleted">deleted = 0</sql>
+ <!-- ===== 新增：关键词分词匹配 =====
+         与前端 matchNpc() 行为一致：空格分词，每个词都要命中（AND）。
+         命中范围：name / role / power / camp_label / tags
+         用 #{w} 占位符传参，不存在 SQL 注入风险。 -->
+    <sql id="Keyword_Match">
+    and
+            (
+                `name`       LIKE CONCAT('%', #{w}, '%')
+             OR `role`       LIKE CONCAT('%', #{w}, '%')
+             OR `power`      LIKE CONCAT('%', #{w}, '%')
+             OR `camp_label` LIKE CONCAT('%', #{w}, '%')
+             OR `tags`       LIKE CONCAT('%', #{w}, '%')
+            )
+    </sql>
+
+       <!-- ===== 新增：查询条件（用 <where> 自动去掉多余的 AND/OR） ===== -->
+    <sql id="Npc_Condition">
+        <where>
+            <include refid="NotDeleted"/>
+            <if test="words != null and words.trim() != ''">
+                <include refid="Keyword_Match"/>
+            </if>
+            <if test="faction != null and faction.trim() != ''">
+                AND faction = #{faction}
+            </if>
+            <if test="status != null and status.trim() != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </sql>
+
+  <!-- 改造后：支持 keyword(分词) / faction / status 条件查询
+         不传任何条件时，行为与原 SQL 完全一致（只过滤 deleted=0） -->
+    <select id="selectAll" resultType="com.txy.entity.Npc">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM npc
+        <include refid="Npc_Condition"/>
+        ORDER BY sort ASC, id ASC
+    </select>
+    <select id="selectById" resultType="com.txy.entity.Npc">
+        SELECT <include refid="Base_Column_List"/>
+        FROM npc
+        WHERE id = #{id} AND <include refid="NotDeleted"/>
+        LIMIT 1
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM npc WHERE <include refid="NotDeleted"/>
+    </select>
+
+    <insert id="insert" parameterType="com.txy.entity.Npc">
+        INSERT INTO npc (
+            id, name, icon, cover, role, faction, camp_label, power, ability, cost,
+            tags, `desc`, quotes, hook_action, hook_contrast, hook_fragile, hook_speech,
+            sort, status, deleted
+        ) VALUES (
+            #{id}, #{name}, #{icon}, #{cover}, #{role}, #{faction}, #{campLabel}, #{power},
+            #{ability}, #{cost}, #{tags}, #{desc}, #{quotes}, #{hookAction}, #{hookContrast},
+            #{hookFragile}, #{hookSpeech}, #{sort}, #{status}, 0
+        )
+    </insert>
+
+    <update id="update" parameterType="com.txy.entity.Npc">
+        UPDATE npc
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="icon != null">icon = #{icon},</if>
+            <if test="cover != null">cover = #{cover},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="faction != null">faction = #{faction},</if>
+            <if test="campLabel != null">camp_label = #{campLabel},</if>
+            <if test="power != null">power = #{power},</if>
+            <if test="ability != null">ability = #{ability},</if>
+            <if test="cost != null">cost = #{cost},</if>
+            <if test="tags != null">tags = #{tags},</if>
+            <if test="desc != null">`desc` = #{desc},</if>
+            <if test="quotes != null">quotes = #{quotes},</if>
+            <if test="hookAction != null">hook_action = #{hookAction},</if>
+            <if test="hookContrast != null">hook_contrast = #{hookContrast},</if>
+            <if test="hookFragile != null">hook_fragile = #{hookFragile},</if>
+            <if test="hookSpeech != null">hook_speech = #{hookSpeech},</if>
+            <if test="sort != null">sort = #{sort},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id} AND <include refid="NotDeleted"/>
+    </update>
+
+    <!-- 逻辑删除：不做 DELETE，只置 deleted = 1 -->
+    <update id="logicDelete">
+        UPDATE npc SET deleted = 1 WHERE id = #{id} AND deleted = 0
+    </update>
+
+</mapper>

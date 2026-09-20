@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.txy.mapper.AdminAuditMapper">
+
+    <sql id="Cols">
+        id, `user`, `name`, module, module_name, action, target_id, summary,
+        params, method, uri, ip, success, msg, cost_ms, created_at
+    </sql>
+
+    <sql id="Cond">
+        <where>
+            <if test="user != null and user != ''">AND `user` = #{user}</if>
+            <if test="module != null and module != ''">AND module = #{module}</if>
+            <if test="action != null and action != ''">AND action = #{action}</if>
+            <if test="success != null">AND success = #{success}</if>
+            <if test="dateFrom != null and dateFrom != ''">AND created_at &gt;= #{dateFrom}</if>
+            <if test="dateTo != null and dateTo != ''">AND created_at &lt;= CONCAT(#{dateTo},' 23:59:59')</if>
+            <if test="kw != null and kw != ''">
+                AND (`user` LIKE CONCAT('%',#{kw},'%')
+                  OR `name` LIKE CONCAT('%',#{kw},'%')
+                  OR summary LIKE CONCAT('%',#{kw},'%')
+                  OR target_id LIKE CONCAT('%',#{kw},'%')
+                  OR uri LIKE CONCAT('%',#{kw},'%'))
+            </if>
+        </where>
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO admin_audit_log
+          (id, `user`, `name`, module, module_name, action, target_id, summary,
+           params, method, uri, ip, success, msg, cost_ms, created_at)
+        VALUES
+          (#{id}, #{user}, #{name}, #{module}, #{moduleName}, #{action}, #{targetId}, #{summary},
+           #{params}, #{method}, #{uri}, #{ip}, #{success}, #{msg}, #{costMs}, NOW())
+    </insert>
+
+    <select id="select" resultType="com.txy.entity.AdminAuditLog">
+        SELECT <include refid="Cols"/>
+        FROM admin_audit_log
+        <include refid="Cond"/>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="count" resultType="int">
+        SELECT COUNT(*) FROM admin_audit_log
+        <include refid="Cond"/>
+    </select>
+
+    <delete id="deleteBefore">
+        DELETE FROM admin_audit_log WHERE created_at &lt; DATE_SUB(NOW(), INTERVAL #{days} DAY)
+    </delete>
+
+</mapper>

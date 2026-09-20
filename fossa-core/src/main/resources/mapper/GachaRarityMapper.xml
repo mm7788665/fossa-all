@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.txy.mapper.GachaRarityMapper">
+
+    <sql id="Base_Column_List">
+        rarity_key, rarity_name, label, color, rate, sort_order
+    </sql>
+
+    <!-- 稀有度从高到低 -->
+    <select id="selectAll" resultType="com.txy.entity.GachaRarity">
+        SELECT <include refid="Base_Column_List"/>
+        FROM gacha_rarity
+        ORDER BY sort_order DESC
+    </select>
+
+    <select id="selectByKey" resultType="com.txy.entity.GachaRarity">
+        SELECT <include refid="Base_Column_List"/>
+        FROM gacha_rarity
+        WHERE rarity_key = #{rarityKey}
+    </select>
+
+</mapper>

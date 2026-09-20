@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.txy.mapper.PlayerMapper">
+
+    <sql id="Base_Column_List">
+        id, name, tag, avatar, phone, reg_date, vip, status, wx_open_id, wx_union_id,
+        deleted, created_time, update_time
+    </sql>
+
+    <sql id="NotDeleted">deleted = 0</sql>
+
+    <select id="selectAll" resultType="com.txy.entity.Player">
+        SELECT <include refid="Base_Column_List"/>
+        FROM player
+        WHERE <include refid="NotDeleted"/>
+        ORDER BY created_time DESC
+    </select>
+
+    <select id="selectById" resultType="com.txy.entity.Player">
+        SELECT <include refid="Base_Column_List"/>
+        FROM player
+        WHERE id = #{id} AND <include refid="NotDeleted"/>
+        LIMIT 1
+    </select>
+<select id="selectByOpenId" resultType="com.txy.entity.Player">
+        SELECT <include refid="Base_Column_List"/>
+        FROM player
+        WHERE wx_open_id = #{openId} AND <include refid="NotDeleted"/>
+        LIMIT 1
+    </select>
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM player WHERE <include refid="NotDeleted"/>
+    </select>
+
+    <insert id="insert" parameterType="com.txy.entity.Player">
+        INSERT INTO player (id, name, tag, avatar, phone, reg_date, vip, status,
+                            wx_open_id, wx_union_id, deleted)
+        VALUES (#{id}, #{name}, #{tag}, #{avatar}, #{phone}, #{regDate}, #{vip}, #{status},
+                #{wxOpenId}, #{wxUnionId}, 0)
+    </insert>
+
+    <update id="update" parameterType="com.txy.entity.Player">
+        UPDATE player
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="tag != null">tag = #{tag},</if>
+            <if test="avatar != null">avatar = #{avatar},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="regDate != null">reg_date = #{regDate},</if>
+            <if test="vip != null">vip = #{vip},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="wxOpenId != null">wx_open_id = #{wxOpenId},</if>
+            <if test="wxUnionId != null">wx_union_id = #{wxUnionId},</if>
+        </set>
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="logicDelete">
+        UPDATE player SET deleted = 1 WHERE id = #{id} AND deleted = 0
+    </update>
+
+</mapper>

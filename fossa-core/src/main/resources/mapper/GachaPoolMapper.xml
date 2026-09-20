@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.txy.mapper.GachaPoolMapper">
+
+    <sql id="Base_Column_List">
+        id, name, status, currency, cost_single, cost_ten,
+        pity_ssr, pity_ssr_start, pity_sr, pity_sr_start, reset_on_hit, up_npc_id, up_bonus,
+        min_ssr_draws, sort, deleted, created_at, updated_at
+    </sql>
+
+    <select id="selectAll" resultType="com.txy.entity.GachaPool">
+        SELECT <include refid="Base_Column_List"/>
+        FROM gacha_pool
+        WHERE deleted = 0
+        ORDER BY sort ASC, id ASC
+    </select>
+
+    <select id="selectByStatus" resultType="com.txy.entity.GachaPool">
+        SELECT <include refid="Base_Column_List"/>
+        FROM gacha_pool
+        WHERE deleted = 0
+        <if test="status != null and status != ''">AND status = #{status}</if>
+        ORDER BY sort ASC, id ASC
+    </select>
+
+    <select id="selectById" resultType="com.txy.entity.GachaPool">
+        SELECT <include refid="Base_Column_List"/>
+        FROM gacha_pool
+        WHERE deleted = 0 AND id = #{id}
+    </select>
+
+    <!-- 不管 deleted，只判断行是否存在（防止已软删的 id 被重复 INSERT） -->
+    <select id="selectByIdAny" resultType="com.txy.entity.GachaPool">
+        SELECT <include refid="Base_Column_List"/>
+        FROM gacha_pool
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO gacha_pool
+          (id, name, status, currency, cost_single, cost_ten,
+           pity_ssr, pity_ssr_start, pity_sr, pity_sr_start,
+           reset_on_hit, up_npc_id, up_bonus, min_ssr_draws, sort, deleted)
+        VALUES
+          (#{id}, #{name}, #{status}, #{currency}, #{costSingle}, #{costTen},
+           #{pitySsr}, #{pitySsrStart}, #{pitySr}, #{pitySrStart},
+           #{resetOnHit}, #{upNpcId}, #{upBonus}, #{minSsrDraws}, #{sort}, 0)
+    </insert>
+
+    <update id="update">
+        UPDATE gacha_pool
+        SET name         = #{name},
+            status       = #{status},
+            currency     = #{currency},
+            cost_single  = #{costSingle},
+            cost_ten     = #{costTen},
+            pity_ssr     = #{pitySsr},
+            pity_ssr_start = #{pitySsrStart},
+            pity_sr      = #{pitySr},
+            pity_sr_start  = #{pitySrStart},
+            reset_on_hit = #{resetOnHit},
+            up_npc_id    = #{upNpcId},
+            up_bonus     = #{upBonus},
+            min_ssr_draws= #{minSsrDraws},
+            sort         = #{sort},
+
+            deleted      = 0
+        WHERE id = #{id}
+    </update>
+
+    <update id="softDelete">
+        UPDATE gacha_pool SET deleted = 1 WHERE id = #{id}
+    </update>
+
+</mapper>

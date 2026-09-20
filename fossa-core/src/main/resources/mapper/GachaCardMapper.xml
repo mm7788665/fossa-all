@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.txy.mapper.GachaCardMapper">
+
+    <sql id="Base_Column_List">
+        id, pool_id, name, thumb, image, npc_id, rarity, weight, stock, is_up, sort, deleted, created_at, updated_at
+    </sql>
+
+    <select id="selectByPool" resultType="com.txy.entity.GachaCard">
+        SELECT <include refid="Base_Column_List"/>
+        FROM gacha_card
+        WHERE deleted = 0 AND pool_id = #{poolId}
+        ORDER BY sort ASC, id ASC
+    </select>
+
+    <select id="selectById" resultType="com.txy.entity.GachaCard">
+        SELECT <include refid="Base_Column_List"/>
+        FROM gacha_card
+        WHERE deleted = 0 AND id = #{id}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO gacha_card
+          (id, pool_id, name, thumb, image, npc_id, rarity, weight, stock, is_up, sort, deleted)
+        VALUES
+          (#{id}, #{poolId}, #{name}, #{thumb}, #{image}, #{npcId}, #{rarity}, #{weight}, #{stock}, #{isUp}, #{sort}, 0)
+    </insert>
+
+    <update id="update">
+        UPDATE gacha_card
+        SET pool_id = #{poolId}, name = #{name}, thumb = #{thumb}, image = #{image}, npc_id = #{npcId},
+            rarity = #{rarity}, weight = #{weight}, stock = #{stock},
+            is_up  = #{isUp},  sort    = #{sort}
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <!-- 整池保存用：同 id 已存在则更新（并复活），不存在才插入 -->
+    <insert id="upsert">
+        INSERT INTO gacha_card
+          (id, pool_id, name,thumb,image, npc_id, rarity, weight, stock, is_up, sort, deleted)
+        VALUES
+          (#{id}, #{poolId}, #{name},#{thumb},#{image}, #{npcId}, #{rarity}, #{weight}, #{stock}, #{isUp}, #{sort}, 0)
+        ON DUPLICATE KEY UPDATE
+          pool_id = VALUES(pool_id),
+          name    = VALUES(name),
+          thumb   = VALUES(thumb),
+          image   = VALUES(image),
+          npc_id  = VALUES(npc_id),
+          rarity  = VALUES(rarity),
+          weight  = VALUES(weight),
+          stock   = VALUES(stock),
+          is_up   = VALUES(is_up),
+          sort    = VALUES(sort),
+          deleted = 0
+    </insert>
+
+    <!-- 差量删除：本次没提交上来的卡软删 -->
+    <update id="softDeleteExcept">
+        UPDATE gacha_card SET deleted = 1
+        WHERE pool_id = #{poolId} AND deleted = 0
+        <if test="ids != null and ids.size() &gt; 0">
+          AND id NOT IN
+          <foreach collection="ids" item="i" open="(" close=")" separator=",">#{i}</foreach>
+        </if>
+    </update>
+
+    <!-- 只改权重：滑块拖动高频调用 -->
+    <update id="updateWeight">
+        UPDATE gacha_card SET weight = #{weight} WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE gacha_card SET deleted = 1 WHERE id = #{id}
+    </update>
+
+    <update id="softDeleteByPool">
+        UPDATE gacha_card SET deleted = 1 WHERE pool_id = #{poolId}
+    </update>
+
+</mapper>

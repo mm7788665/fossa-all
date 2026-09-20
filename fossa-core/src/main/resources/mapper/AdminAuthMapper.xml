@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.txy.mapper.AdminAuthMapper">
+
+    <sql id="Account_Cols">
+        `user`, `pass`, `role`, `name`, `last_login`, `created_at`, `deleted`
+    </sql>
+
+    <select id="selectByUser" resultType="com.txy.entity.AdminAccount">
+        SELECT <include refid="Account_Cols"/>
+        FROM admin_account
+        WHERE deleted = 0 AND `user` = #{user}
+        LIMIT 1
+    </select>
+
+    <update id="updatePass">
+        UPDATE admin_account SET pass = #{pass} WHERE `user` = #{user} AND deleted = 0
+    </update>
+
+    <update id="updateLastLogin">
+        UPDATE admin_account SET last_login = NOW() WHERE `user` = #{user}
+    </update>
+
+    <insert id="insertSession">
+        INSERT INTO admin_session (token, `user`, `name`, role_key, ip, ua, login_at, expire_at, last_at)
+        VALUES (#{token}, #{user}, #{name}, #{roleKey}, #{ip}, #{ua}, NOW(), #{expireAt}, NOW())
+    </insert>
+
+    <select id="selectSession" resultType="com.txy.entity.AdminSession">
+        SELECT token, `user`, `name`, role_key, ip, ua, login_at, expire_at, last_at
+        FROM admin_session WHERE token = #{token} LIMIT 1
+    </select>
+
+    <update id="touchSession">
+        UPDATE admin_session SET last_at = NOW(), expire_at = #{expireAt} WHERE token = #{token}
+    </update>
+
+    <delete id="deleteSession">
+        DELETE FROM admin_session WHERE token = #{token}
+    </delete>
+
+    <delete id="deleteSessionByUser">
+        DELETE FROM admin_session WHERE `user` = #{user}
+    </delete>
+
+    <delete id="deleteExpiredSessions">
+        DELETE FROM admin_session WHERE expire_at &lt; NOW()
+    </delete>
+
+    <select id="selectOnlineSessions" resultType="com.txy.entity.AdminSession">
+        SELECT token, `user`, `name`, role_key, ip, ua, login_at, expire_at, last_at
+        FROM admin_session WHERE expire_at &gt;= NOW() ORDER BY last_at DESC LIMIT 100
+    </select>
+
+    <select id="selectPermsByRole" resultType="java.lang.String">
+        SELECT perm_code FROM admin_role_perm WHERE role_key = #{roleKey}
+    </select>
+
+</mapper>

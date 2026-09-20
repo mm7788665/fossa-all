@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.txy.mapper.NpcPopularityMapper">
+
+    <sql id="Base_Column_List">
+        npc_id, votes, weight, deleted, updated_at
+    </sql>
+
+    <sql id="NotDeleted">deleted = 0</sql>
+
+    <select id="selectAll" resultType="com.txy.entity.NpcPopularity">
+        SELECT <include refid="Base_Column_List"/>
+        FROM npc_popularity
+        WHERE <include refid="NotDeleted"/>
+        ORDER BY weight DESC
+    </select>
+
+    <select id="selectByNpcId" resultType="com.txy.entity.NpcPopularity">
+        SELECT <include refid="Base_Column_List"/>
+        FROM npc_popularity
+        WHERE npc_id = #{npcId} AND <include refid="NotDeleted"/>
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.txy.entity.NpcPopularity">
+        INSERT INTO npc_popularity (npc_id, votes, weight, deleted, updated_at)
+        VALUES (#{npcId}, #{votes}, #{weight}, 0, NOW())
+    </insert>
+
+    <update id="update" parameterType="com.txy.entity.NpcPopularity">
+        UPDATE npc_popularity
+        <set>
+            <if test="votes != null">votes = #{votes},</if>
+            <if test="weight != null">weight = #{weight},</if>
+        </set>
+        WHERE npc_id = #{npcId} AND deleted = 0
+    </update>
+
+    <update id="logicDelete">
+        UPDATE npc_popularity SET deleted = 1 WHERE npc_id = #{npcId} AND deleted = 0
+    </update>
+
+</mapper>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.txy.mapper.SettingMapper">
+
+    <!-- k 为保留字，反引号 -->
+    <sql id="Base_Column_List">`k`, `v`, label, deleted</sql>
+
+    <sql id="NotDeleted">deleted = 0</sql>
+
+    <select id="selectAll" resultType="com.txy.entity.Setting">
+        SELECT <include refid="Base_Column_List"/>
+        FROM setting
+        WHERE <include refid="NotDeleted"/>
+    </select>
+
+    <select id="selectByKey" resultType="com.txy.entity.Setting">
+        SELECT <include refid="Base_Column_List"/>
+        FROM setting
+        WHERE `k` = #{k} AND <include refid="NotDeleted"/>
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.txy.entity.Setting">
+        INSERT INTO setting (`k`, `v`, label, deleted)
+        VALUES (#{k}, #{v}, #{label}, 0)
+    </insert>
+
+    <update id="update" parameterType="com.txy.entity.Setting">
+        UPDATE setting SET `v` = #{v}
+        <if test="label != null">, label = #{label}</if>
+        WHERE `k` = #{k} AND deleted = 0
+    </update>
+
+    <update id="logicDelete">
+        UPDATE setting SET deleted = 1 WHERE `k` = #{k} AND deleted = 0
+    </update>
+
+</mapper>

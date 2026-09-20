@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.txy.mapper.GachaMiniMapper">
+
+    <!-- ==================== 后台配置表（只读） ==================== -->
+
+    <sql id="Pool_Columns">
+        id, name, status, currency, cost_single, cost_ten,
+        pity_ssr, pity_sr, reset_on_hit, up_npc_id, up_bonus, sort
+    </sql>
+
+    <!-- 只取启用中的奖池 -->
+    <select id="selectOpenPools" resultType="com.txy.entity.GachaPool">
+        SELECT <include refid="Pool_Columns"/>
+        FROM gacha_pool
+        WHERE deleted = 0 AND status = '启用'
+        ORDER BY sort ASC, id ASC
+    </select>
+
+    <select id="selectOpenPoolById" resultType="com.txy.entity.GachaPool">
+        SELECT <include refid="Pool_Columns"/>
+        FROM gacha_pool
+        WHERE deleted = 0 AND status = '启用' AND id = #{id}
+    </select>
+
+    <select id="selectCards" resultType="com.txy.entity.GachaCard">
+        SELECT id, pool_id, name, npc_id, rarity, weight, stock, is_up, sort
+        FROM gacha_card
+        WHERE deleted = 0 AND pool_id = #{poolId}
+        ORDER BY sort ASC, id ASC
+    </select>
+
+    <select id="countCards" resultType="int">
+        SELECT COUNT(*) FROM gacha_card WHERE deleted = 0 AND pool_id = #{poolId}
+    </select>
+
+    <select id="selectRarity" resultType="com.txy.entity.GachaRarity">
+        SELECT rarity_key, rarity_name, label, color, rate, sort_order
+        FROM gacha_rarity
+        ORDER BY sort_order DESC
+    </select>
+
+    <!-- ==================== 保底进度 ==================== -->
+
+    <sql id="Pity_Columns">
+        id, user_id, pool_id, ssr_count, sr_count, total_count, ssr_total, updated_at
+    </sql>
+
+    <select id="selectPity" resultType="com.txy.entity.GachaUserPity">
+        SELECT <include refid="Pity_Columns"/>
+        FROM gacha_user_pity
+        WHERE user_id = #{userId} AND pool_id = #{poolId}
+    </select>
+
+    <insert id="insertPity">
+        INSERT INTO gacha_user_pity (id, user_id, pool_id, ssr_count, sr_count, total_count, ssr_total)
+        VALUES (#{id}, #{userId}, #{poolId}, #{ssrCount}, #{srCount}, #{totalCount}, #{ssrTotal})
+    </insert>
+
+    <update id="updatePity">
+        UPDATE gacha_user_pity
+        SET ssr_count = #{ssrCount}, sr_count = #{srCount},
+            total_count = #{totalCount}, ssr_total = #{ssrTotal}
+        WHERE user_id = #{userId} AND pool_id = #{poolId}
+    </update>
+
+    <!-- ==================== 抽卡记录 ==================== -->
+
+    <insert id="batchInsertRecords">
+        INSERT INTO gacha_draw_record
+          (id, batch_no, user_id, pool_id, card_id, card_name, rarity, is_up, draw_index, is_pity, cost)
+        VALUES
+        <foreach collection="list" item="r" separator=",">
+          (#{r.id}, #{r.batchNo}, #{r.userId}, #{r.poolId}, #{r.cardId}, #{r.cardName},
+           #{r.rarity}, #{r.isUp}, #{r.drawIndex}, #{r.isPity}, #{r.cost})
+        </foreach>
+    </insert>
+
+    <select id="selectRecords" resultType="com.txy.entity.GachaDrawRecord">
+        SELECT id, batch_no, user_id, pool_id, card_id, card_name,
+               rarity, is_up, draw_index, is_pity, cost, created_at
+        FROM gacha_draw_record
+        WHERE user_id = #{userId}
+        <if test="poolId != null and poolId != ''">AND pool_id = #{poolId}</if>
+        ORDER BY created_at DESC, draw_index DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- ==================== 用户卡牌 ==================== -->
+
+    <select id="selectOwnedCardIds" resultType="string">
+        SELECT card_id FROM gacha_user_card WHERE user_id = #{userId}
+    </select>
+
+    <select id="selectUserCards" resultType="com.txy.entity.GachaUserCard">
+        SELECT id, user_id, card_id, pool_id, card_name, rarity, count, first_at, updated_at
+        FROM gacha_user_card
+        WHERE user_id = #{userId}
+        <if test="rarity != null and rarity != ''">AND rarity = #{rarity}</if>
+        ORDER BY FIELD(rarity, 'SSR', 'SR', 'R', 'N'), first_at DESC
+    </select>
+
+    <select id="selectUserCard" resultType="com.txy.entity.GachaUserCard">
+        SELECT id, user_id, card_id, pool_id, card_name, rarity, count, first_at, updated_at
+        FROM gacha_user_card
+        WHERE user_id = #{userId} AND card_id = #{cardId}
+    </select>
+
+    <insert id="insertUserCard">
+        INSERT INTO gacha_user_card (id, user_id, card_id, pool_id, card_name, rarity, count)
+        VALUES (#{id}, #{userId}, #{cardId}, #{poolId}, #{cardName}, #{rarity}, #{count})
+    </insert>
+
+    <update id="incrUserCard">
+        UPDATE gacha_user_card SET count = count + 1 WHERE user_id = #{userId} AND card_id = #{cardId}
+    </update>
+
+    <!-- ==================== 库存 ==================== -->
+    <!-- 只减大于 0 的库存；-1 为不限量，不受影响 -->
+    <update id="decrStock">
+        UPDATE gacha_card SET stock = stock - 1
+        WHERE id = #{cardId} AND stock &gt; 0
+    </update>
+
+</mapper>

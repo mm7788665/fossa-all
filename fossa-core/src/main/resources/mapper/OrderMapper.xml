@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.txy.mapper.OrderMapper">
+
+    <sql id="Base_Column_List">
+        id, player_id, show_id, user_name, amount, qty, channel, status, deleted, created_at
+    </sql>
+
+    <sql id="NotDeleted">deleted = 0</sql>
+
+    <select id="selectAll" resultType="com.txy.entity.Order">
+        SELECT <include refid="Base_Column_List"/>
+        FROM `order`
+        WHERE <include refid="NotDeleted"/>
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectById" resultType="com.txy.entity.Order">
+        SELECT <include refid="Base_Column_List"/>
+        FROM `order`
+        WHERE id = #{id} AND <include refid="NotDeleted"/>
+        LIMIT 1
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM `order` WHERE <include refid="NotDeleted"/>
+    </select>
+
+    <!-- 关联玩家 + 场次 -->
+    <select id="selectOrderList" resultType="com.txy.vo.OrderVO">
+        SELECT o.id, o.player_id AS playerId, p.name AS playerName,
+               o.show_id AS showId, s.title AS showTitle,
+               o.amount, o.qty, o.channel, o.status, o.created_at AS createdAt
+        FROM `order` o
+        LEFT JOIN player p ON o.player_id = p.id AND p.deleted = 0
+        LEFT JOIN `show` s ON o.show_id = s.id AND s.deleted = 0
+        WHERE o.deleted = 0
+        ORDER BY o.created_at DESC
+    </select>
+
+    <select id="sumRevenue" resultType="double">
+        SELECT COALESCE(SUM(amount * qty), 0)
+        FROM `order`
+        WHERE deleted = 0 AND status IN ('已支付', '已核销')
+    </select>
+
+    <insert id="insert" parameterType="com.txy.entity.Order">
+        INSERT INTO `order` (id, player_id, show_id, user_name, amount, qty, channel, status, deleted)
+        VALUES (#{id}, #{playerId}, #{showId}, #{userName}, #{amount}, #{qty}, #{channel}, #{status}, 0)
+    </insert>
+
+    <update id="update" parameterType="com.txy.entity.Order">
+        UPDATE `order`
+        <set>
+            <if test="playerId != null">player_id = #{playerId},</if>
+            <if test="showId != null">show_id = #{showId},</if>
+            <if test="userName != null">user_name = #{userName},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="qty != null">qty = #{qty},</if>
+            <if test="channel != null">channel = #{channel},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="updateStatus">
+        UPDATE `order` SET status = #{status} WHERE id = #{id} AND deleted = 0
+    </update>
+
+    <update id="logicDelete">
+        UPDATE `order` SET deleted = 1 WHERE id = #{id} AND deleted = 0
+    </update>
+
+</mapper>
