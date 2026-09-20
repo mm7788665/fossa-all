@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>接口自检 · 灰塔之下管理后台</title>
+    <style>
+        body{font-family:"Microsoft YaHei","PingFang SC",monospace;background:#f0f2f5;margin:0;padding:24px;color:#101828}
+        h1{font-size:18px;margin:0 0 4px}
+        .desc{color:#69707c;font-size:12px;margin-bottom:18px}
+        .box{background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:16px;margin-bottom:14px}
+        .base{font-family:monospace;font-size:13px;background:#f7f8fa;padding:8px 12px;border-radius:6px;margin-bottom:14px}
+        button{background:#344054;color:#fff;border:none;border-radius:6px;padding:9px 16px;font-size:13px;cursor:pointer;margin-right:8px}
+        button.ghost{background:#fff;color:#344054;border:1px solid #e4e7ec}
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th,td{border:1px solid #e4e7ec;padding:7px 10px;text-align:left;vertical-align:top}
+        th{background:#f7f8fa}
+        .ok{color:#137752;font-weight:600}
+        .bad{color:#b42318;font-weight:600}
+        .warn{color:#b54708;font-weight:600}
+        pre{margin:6px 0 0;background:#f7f8fa;padding:8px;border-radius:6px;font-size:11px;
+            max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+        .tip{background:#fffaeb;border:1px solid #fec84b;border-radius:8px;padding:12px;font-size:12px;line-height:1.7;margin-top:10px}
+        .tip b{color:#b54708}
+        .stat{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;font-weight:600}
+    </style>
+</head>
+<body>
+<h1>🔌 后端接口自检</h1>
+<div class="desc">打开本页即可看到每个接口的真实响应；用来定位"页面没显示后端数据"的原因。</div>
+
+<div class="base">当前接口基址：<b id="base"></b> ｜ 页面地址：<b id="href"></b></div>
+
+<div class="box">
+    <button onclick="run()">▶ 开始检测</button>
+    <button class="ghost" onclick="document.getElementById('out').innerHTML=''">清空</button>
+    <label style="font-size:12px;margin-left:8px">
+        基址：<input id="baseInput" style="padding:6px 8px;font-family:monospace;width:230px">
+    </label>
+</div>
+
+<div id="stat" class="stat" style="display:none"></div>
+<div id="tip" class="tip" style="display:none"></div>
+<div class="box" id="out"></div>
+
+<script>
+    var DEF = '/fossa/api';
+    document.getElementById('base').textContent = DEF;
+    document.getElementById('href').textContent = location.pathname;
+    document.getElementById('baseInput').value = DEF;
+
+    var CASES = [
+        { n:'控制台统计',   m:'GET',    p:'/dashboard/stats' },
+        { n:'NPC 列表',     m:'GET',    p:'/npcs' },
+        { n:'场次列表',     m:'GET',    p:'/shows' },
+        { n:'订单列表',     m:'GET',    p:'/orders' },
+        { n:'订单状态选项', m:'GET',    p:'/orders/status-options' },
+        { n:'公告列表',     m:'GET',    p:'/notices' },
+        { n:'玩家列表',     m:'GET',    p:'/players' },
+        { n:'亲密度按NPC',  m:'GET',    p:'/intimacy/by-npc/linshen' },
+        { n:'亲密度总榜',   m:'GET',    p:'/intimacy/rank' },
+        { n:'系统设置',     m:'GET',    p:'/settings' }
+    ];
+
+    function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+    async function hit(base, m, p){
+        var r = { status:'-', ct:'-', body:'', ok:false, kind:'' };
+        try{
+            var res = await fetch(base + p, { method:m, credentials:'same-origin',
+                headers:{ 'Accept':'application/json' } });
+            r.status = res.status;
+            r.ct = res.headers.get('content-type') || '-';
+            var txt = await res.text();
+            r.body = txt.slice(0, 400);
+            var isJson = /json/i.test(r.ct);
+            if (isJson){
+                try{
+                    var j = JSON.parse(txt);
+                    r.ok = true; r.kind = 'json';
+                    var has = function(k){ return j && Object.prototype.hasOwnProperty.call(j,k); };
+                    if (has('code') && j.code !== 0 && j.code !== 200 && j.success !== true){
+                        r.ok = false; r.kind = 'biz-fail'; r.err = j.msg || j.message || ('code=' + j.code);
+                    } else {
+                        var d = has('data') ? j.data : j;
+                        r.count = Array.isArray(d) ? d.length + ' 条' : (d && typeof d==='object' ? Object.keys(d).length + ' 个字段' : String(d));
+                    }
+                }catch(e){ r.kind='bad-json'; r.err = e.message; }
+            } else if (res.status >= 300 && res.status < 400){
+                r.kind = 'redirect'; r.err = '被重定向（疑似登录拦截/Spring Security）→ ' + (res.headers.get('location')||'');
+            } else {
+                r.kind = 'html'; r.err = '返回的不是 JSON（网关错误页 / 路径不对）';
+            }
+        }catch(e){ r.err = e.message || String(e); r.kind = 'network'; }
+        return r;
+    }
+
+    async function run(){
+        var base = document.getElementById('baseInput').value.trim() || DEF;
+        var out = document.getElementById('out');
+        var statEl = document.getElementById('stat');
+        var tipEl = document.getElementById('tip');
+        out.innerHTML = '<div>检测中…</div>';
+        statEl.style.display='none'; tipEl.style.display='none';
+
+        var rows = [], pass = 0, kinds = {};
+        for (var i=0;i<CASES.length;i++){
+            var c = CASES[i];
+            var r = await hit(base, c.m, c.p);
+            kinds[r.kind] = (kinds[r.kind]||0) + 1;
+            if (r.ok) pass++;
+            rows.push('<tr>' +
+                '<td>' + esc(c.n) + '</td>' +
+                '<td>' + esc(c.m + ' ' + c.p) + '</td>' +
+                '<td class="' + (r.ok?'ok':'bad') + '">' + esc(r.status) + '</td>' +
+                '<td>' + esc(r.ct) + '</td>' +
+                '<td class="' + (r.ok?'ok':'bad') + '">' +
+                (r.ok ? ('✅ ' + esc(r.count||'')) : ('❌ ' + esc(r.err||'失败'))) + '</td>' +
+                '</tr>' +
+                (!r.ok || r.body ? '<tr><td colspan="5"><pre>' + esc(r.body||'(空响应体)') + '</pre></td></tr>' : ''));
+        }
+
+        out.innerHTML = '<table><thead><tr><th>模块</th><th>请求</th><th>HTTP</th><th>Content-Type</th><th>结果</th></tr></thead><tbody>' +
+            rows.join('') + '</tbody></table>';
+
+        statEl.style.display='block';
+        if (pass === CASES.length){
+            statEl.className='stat'; statEl.style.background='#ecfdf3'; statEl.style.color='#137752';
+            statEl.textContent = '✅ 全部 ' + pass + '/' + CASES.length + ' 个接口正常 —— 前端应当能显示后端数据。';
+            tipEl.style.display='none';
+            return;
+        }
+        statEl.style.background='#fef3f2'; statEl.style.color='#b42318';
+        statEl.textContent = '❌ ' + pass + '/' + CASES.length + ' 个接口正常，' + (CASES.length-pass) + ' 个失败';
+
+        var tips = [];
+        if (kinds.network) tips.push('<b>网络不通（Failed to fetch）</b>：后端应用没启动，或端口/域名不对。确认 Spring Boot 已跑起来，且本页与后端同源。');
+        if (kinds.html) tips.push('<b>返回 HTML 而非 JSON</b>：十有八九是 <b>context-path 不对</b>。本页把基址拼成了 <code>' + esc(base) + '</code>，但你的 Controller 是 <code>@RequestMapping("/api/...")</code>；如果项目没有配置 <code>server.servlet.context-path=/fossa</code>，正确基址应为 <code>/api</code>。可改上方"基址"输入框再测一次。');
+        if (kinds.redirect) tips.push('<b>302 重定向</b>：请求被登录拦截器/Spring Security 拦下了。需要在后端放行 <code>/api/**</code>，或让前端先完成登录带上 Cookie/Token。');
+        if (kinds['bad-json']) tips.push('<b>JSON 解析失败</b>：后端返回体和 <code>R{code,msg,data}</code> 结构不一致，请用 API.verbose 或本页响应体核对字段名。');
+        if (kinds['biz-fail']) tips.push('<b>业务失败</b>：接口通了但返回 code≠200（见响应体 msg），多因数据表为空或 SQL 报错。');
+        if (pass > 0 && pass < CASES.length) tips.push('<b>只有部分接口通</b>：前端已开启 fallback，失败的那几个会静默回退本地数据——这正是"看不到后端数据"的常见原因。可把 <code>API.fallback</code> 设为 <code>false</code> 让错误暴露出来。');
+        tipEl.innerHTML = tips.join('<br><br>');
+        tipEl.style.display='block';
+    }
+    run();
+</script>
+</body>
+</html>

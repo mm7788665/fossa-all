@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磐渡戏剧工厂 · 灰塔之下 管理后台</title>
+<link rel="stylesheet" href="/fossa/common/css/style.css">
+</head>
+<body>
+<!-- 登录页 -->
+<div id="login" class="login">
+  <div class="login-card">
+    <div class="login-logo">🜲</div>
+    <div class="login-brand">磐渡戏剧工厂</div>
+    <div class="login-sub">灰塔之下 · 沉浸式异能剧本 管理后台</div>
+    <input id="loginUser" type="text" placeholder="账号" value="admin">
+    <input id="loginPass" type="password" placeholder="密码" value="123456">
+    <button id="loginBtn">进入控制台</button>
+    <div class="login-hint">默认账号 admin / 123456（演示用）</div>
+  </div>
+</div>
+
+<!-- 主控制台 -->
+<div id="app" class="app hidden">
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="side-brand">
+      <span class="side-logo">🜲</span>
+      <div class="side-brand-text">
+        <div class="side-title">灰塔之下</div>
+        <div class="side-sub">管理后台</div>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <div class="side-foot-name" id="sideName">admin</div>
+      <div class="side-foot-btns">
+        <button id="changePwdBtn" class="side-logout">改密码</button>
+        <button id="logoutBtn" class="side-logout">退出</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 顶部栏 + 内容 -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title" id="pageTitle">控制台</div>
+      <div class="topbar-actions">
+        <span id="apiState" title="接口连接状态" style="display:flex;align-items:center;gap:5px;font-size:12px;padding:4px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer">⚪ 接口未检测</span>
+        <div class="theme-trigger" id="themeTrigger" onclick="ThemePanel.toggle()">
+          <span class="swatch" id="topSwatch"></span>
+          <span id="topThemeName">亮色</span>
+          <span>▾</span>
+        </div>
+        <span class="topbar-store">🏭 磐渡戏剧工厂</span>
+        <span class="topbar-user">👤 admin</span>
+      </div>
+    </header>
+    <main id="view" class="view"></main>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+<!-- Modal -->
+<div id="modal" class="modal hidden"></div>
+<!-- 主题切换气泡 -->
+<div id="themePop" class="theme-pop hidden"></div>
+
+<script src="/fossa/common/js/data.js"></script>
+<script src="/fossa/common/js/api.js"></script>
+<script src="/fossa/common/js/theme.js"></script>
+<script src="/fossa/common/js/theme-panel.js"></script>
+<script src="/fossa/common/js/app.js"></script>
+</body>
+</html>
