@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+
+    <!-- 直接使用appId和secret获取小程序用户信息 -->
+    <location id="jsCodeUserInfo">
+        <url><![CDATA[https://api.weixin.qq.com/sns/jscode2session?appid={appId}&secret={secret}&js_code={code}&grant_type=authorization_code]]></url>
+    </location>
+
+    <!--获取开卡组件链接接口 -->
+    <location id="getOpenCardUrl">
+        <url>https://api.weixin.qq.com/card/membercard/activate/geturl?access_token={accessToken}</url>
+        <postdata>
+            {
+            "card_id":"{cardId}",
+            "outer_str":"{outerStr}"
+            }
+        </postdata>
+    </location>
+</root>
